@@ -1,0 +1,63 @@
+[wokwi]
+version = 1
+firmware = '.pio/build/esp32dev/firmware.elf'
+
+[[parts]]
+type = "wokwi-esp32-devkit-v1"
+id = "esp"
+
+[[parts]]
+type = "wokwi-ds18b20"
+id = "ds18b20"
+
+[[parts]]
+type = "wokwi-ssd1306"
+id = "oled"
+
+[[parts]]
+type = "wokwi-mpu6050"
+id = "mpu6050"
+
+[[connections]]
+from = "esp:16"
+to = "ds18b20:DQ"
+
+[[connections]]
+from = "esp:21"
+to = "oled:SDA"
+
+[[connections]]
+from = "esp:21"
+to = "mpu6050:SDA"
+
+[[connections]]
+from = "esp:22"
+to = "oled:SCL"
+
+[[connections]]
+from = "esp:22"
+to = "mpu6050:SCL"
+
+[[connections]]
+from = "esp:GND.1"
+to = "ds18b20:GND"
+
+[[connections]]
+from = "esp:GND.1"
+to = "oled:GND"
+
+[[connections]]
+from = "esp:GND.1"
+to = "mpu6050:GND"
+
+[[connections]]
+from = "esp:3V3"
+to = "ds18b20:VDD"
+
+[[connections]]
+from = "esp:3V3"
+to = "oled:VCC"
+
+[[connections]]
+from = "esp:3V3"
+to = "mpu6050:VCC"
