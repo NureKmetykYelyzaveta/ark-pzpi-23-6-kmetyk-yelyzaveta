@@ -11,31 +11,29 @@ const { swaggerUi, swaggerSpec } = require('./swagger/swagger')
 
 const app = express()
 
-// ВАЖЛИВО для Render/HTTPS за проксі
-app.set('trust proxy', 1) // :contentReference[oaicite:2]{index=2}
+// Render/HTTPS: запити приходять через проксі (важливо для req.protocol)
+app.set('trust proxy', 1)
 
 app.use(express.json())
 app.use(cors())
 
 // -------------------------------
-// SWAGGER (до auth, щоб не вимагав токен і не оновлював activity)
+// SWAGGER (без auth)
 // -------------------------------
+// Віддаємо swagger.json з правильним base URL під поточний домен
 app.get('/swagger.json', (req, res) => {
   const baseUrl = `${req.protocol}://${req.get('host')}`
-  const specWithServer = {
+  res.json({
     ...swaggerSpec,
     servers: [{ url: baseUrl }]
-  }
-  res.json(specWithServer)
+  })
 })
 
-// Swagger UI буде брати спеки звідси, і тоді "Try it out" піде на твій домен
+// Swagger UI підтягує спеки саме з /swagger.json
 app.use(
   '/api-docs',
   swaggerUi.serve,
-  swaggerUi.setup(null, {
-    swaggerOptions: { url: '/swagger.json' } // :contentReference[oaicite:3]{index=3}
-  })
+  swaggerUi.setup(null, { swaggerOptions: { url: '/swagger.json' } })
 )
 
 // -------------------------------
@@ -52,7 +50,10 @@ const publicPaths = new Set([
 // AUTH MIDDLEWARE
 // -------------------------------
 function auth(req, res, next) {
+  // Пропускаємо публічні шляхи
   if (publicPaths.has(req.path)) return next()
+
+  // Swagger UI і його ассети
   if (req.path.startsWith('/api-docs')) return next()
 
   const header = req.headers.authorization
@@ -91,7 +92,7 @@ function auth(req, res, next) {
 
 app.use(auth)
 
-// UPDATE ACTIVITY — реально тільки коли є req.user
+// UPDATE ACTIVITY — тільки для авторизованих
 app.use((req, res, next) => {
   if (!req.user) return next()
   return updateActivity(req, res, next)
@@ -103,13 +104,19 @@ app.use((req, res, next) => {
 app.use('/api/animals', require('./routes/animals'))
 app.use('/api/users', require('./routes/users'))
 app.use('/api/roles', require('./routes/roles'))
-app.use('/api/medical-records', require('./routes/medicalRecords'))
+
+// АЛІАС, щоб Swagger /api/medical працював (бо в swagger.json так записано)
+const medicalRecordsRouter = require('./routes/medicalRecords')
+app.use('/api/medical', medicalRecordsRouter)
+app.use('/api/medical-records', medicalRecordsRouter)
+
 app.use('/api/state-records', require('./routes/stateRecords'))
 app.use('/api/treatments', require('./routes/treatments'))
 app.use('/api/logs', require('./routes/logs'))
 app.use('/api/smart-devices', require('./routes/smartDevices'))
 app.use('/api/admin', require('./routes/admin'))
 
+// Root message (можеш замінити на редірект на /api-docs, якщо хочеш)
 app.get('/', (req, res) => {
   res.send('Pet Shelter API is running')
 })
