@@ -15,8 +15,8 @@ app.set('trust proxy', 1)
 
 app.use(express.json())
 app.use(cors())
-app.use('/api/iot', require('./routes/iot'))
 
+app.use('/api/iot', require('./routes/iot'))
 app.get('/swagger.json', (req, res) => {
   const baseUrl = `${req.protocol}://${req.get('host')}`
   res.json({
@@ -40,7 +40,6 @@ const publicPaths = new Set([
 
 function auth(req, res, next) {
   if (publicPaths.has(req.path)) return next()
-
   if (req.path.startsWith('/api-docs')) return next()
 
   const header = req.headers.authorization
@@ -102,8 +101,31 @@ app.get('/', (req, res) => {
   res.send('Pet Shelter API is running')
 })
 
+
+function ensureSmartDevicesUserId(cb) {
+  db.all('PRAGMA table_info(SmartDevices)', (err, cols) => {
+    if (err) return cb(err)
+
+    const hasUserId = (cols || []).some((c) => c.name === 'UserId')
+    if (hasUserId) return cb(null)
+
+    db.run('ALTER TABLE SmartDevices ADD COLUMN UserId INTEGER', (alterErr) => {
+      if (alterErr) return cb(alterErr)
+      cb(null)
+    })
+  })
+}
+
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`)
-  console.log('Swagger available at /api-docs')
+
+ensureSmartDevicesUserId((err) => {
+  if (err) {
+    console.error('DB migration error:', err.message)
+    process.exit(1)
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server started on port ${PORT}`)
+    console.log('Swagger available at /api-docs')
+  })
 })

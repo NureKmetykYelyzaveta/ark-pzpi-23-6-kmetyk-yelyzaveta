@@ -1,6 +1,6 @@
-const express = require("express");
-const router = express.Router();
-const db = require("../db/db");
+const express = require('express')
+const router = express.Router()
+const db = require('../db/db')
 
 /**
  * @swagger
@@ -41,22 +41,24 @@ const db = require("../db/db");
  *       201:
  *         description: Пристрій створено
  */
-router.post("/", (req, res) => {
-    const { deviceGuid, dogId } = req.body;
+router.post('/', (req, res) => {
+  const { deviceGuid, dogId } = req.body
 
-    if (!deviceGuid || !dogId) {
-        return res.status(400).json({ error: "deviceGuid and dogId are required" });
+  if (!deviceGuid || !dogId) {
+    return res.status(400).json({ error: 'deviceGuid and dogId are required' })
+  }
+
+  db.run(
+    'INSERT INTO SmartDevices (DeviceGuid, DogId, UserId) VALUES (?, ?, ?)',
+    [deviceGuid, dogId, req.user.id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message, code: err.code })
+      }
+      res.status(201).json({ id: this.lastID })
     }
-
-    db.run(
-        "INSERT INTO SmartDevices (DeviceGuid, DogId, UserId) VALUES (?, ?, ?)",
-        [deviceGuid, dogId, req.user.id],
-        function (err) {
-            if (err) return res.status(500).json(err);
-            res.status(201).json({ id: this.lastID });
-        }
-    );
-});
+  )
+})
 
 /**
  * @swagger
@@ -65,16 +67,18 @@ router.post("/", (req, res) => {
  *     summary: Отримати список пристроїв користувача
  *     tags: [SmartDevices]
  */
-router.get("/", (req, res) => {
-    db.all(
-        "SELECT * FROM SmartDevices WHERE UserId = ?",
-        [req.user.id],
-        (err, rows) => {
-            if (err) return res.status(500).json(err);
-            res.json(rows);
-        }
-    );
-});
+router.get('/', (req, res) => {
+  db.all(
+    'SELECT * FROM SmartDevices WHERE UserId = ?',
+    [req.user.id],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: err.message, code: err.code })
+      }
+      res.json(rows)
+    }
+  )
+})
 
 /**
  * @swagger
@@ -83,17 +87,28 @@ router.get("/", (req, res) => {
  *     summary: Оновити дані пристрою
  *     tags: [SmartDevices]
  */
-router.put("/:id", (req, res) => {
-    const { deviceGuid, dogId } = req.body;
+router.put('/:id', (req, res) => {
+  const { deviceGuid, dogId } = req.body
 
-    db.run(
-        "UPDATE SmartDevices SET DeviceGuid=?, DogId=? WHERE Id=?",
-        [deviceGuid, dogId, req.params.id],
-        function (err) {
-            if (err) return res.status(500).json(err);
-            res.json({ updated: this.changes });
-        }
-    );
-});
+  if (!deviceGuid || !dogId) {
+    return res.status(400).json({ error: 'deviceGuid and dogId are required' })
+  }
 
-module.exports = router;
+  db.run(
+    'UPDATE SmartDevices SET DeviceGuid = ?, DogId = ? WHERE Id = ? AND UserId = ?',
+    [deviceGuid, dogId, req.params.id, req.user.id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message, code: err.code })
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Device not found' })
+      }
+
+      res.json({ updated: this.changes })
+    }
+  )
+})
+
+module.exports = router
