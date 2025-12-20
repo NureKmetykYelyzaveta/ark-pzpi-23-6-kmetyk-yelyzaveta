@@ -8,6 +8,8 @@ dotenv.config()
 const db = require('./db/db')
 const updateActivity = require('./middleware/updateActivity')
 const { swaggerUi, swaggerSpec } = require('./swagger/swagger')
+const seed = require('./db/seed')
+
 
 const app = express()
 
@@ -118,14 +120,14 @@ function ensureSmartDevicesUserId(cb) {
 
 const PORT = process.env.PORT || 3000
 
-ensureSmartDevicesUserId((err) => {
-  if (err) {
-    console.error('DB migration error:', err.message)
-    process.exit(1)
-  }
-
-  app.listen(PORT, () => {
-    console.log(`Server started on port ${PORT}`)
-    console.log('Swagger available at /api-docs')
+seed()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server started on port ${PORT}`)
+      console.log('Swagger available at /api-docs')
+    })
   })
-})
+  .catch((err) => {
+    console.error('Seed/startup failed:', err.message)
+    process.exit(1)
+  })

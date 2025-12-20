@@ -16,43 +16,35 @@
 
 #include <math.h>
 
-// ===== Піни =====
 #define ONE_WIRE_BUS 16
 #define SDA_PIN 21
 #define SCL_PIN 22
 
-// ===== DS18B20 =====
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature ds18b20(&oneWire);
 
-// ===== MPU6050 =====
 Adafruit_MPU6050 mpu;
 
-// ===== OLED =====
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-// ===== Пороги =====
 const float TEMP_MIN = 18.0;
 const float TEMP_MAX = 30.0;
 const float MOTION_LIMIT = 1.5;
 
-// ===== Wi-Fi / Backend (ЗМІНИ ПІД СЕБЕ) =====
-// Для Wokwi зазвичай так:
 static const char* WIFI_SSID = "Wokwi-GUEST";
 static const char* WIFI_PASS = "";
 
-// Твій Render URL:
+
 static const char* API_BASE = "https://ark-pzpi-23-6-kmetyk-yelyzaveta.onrender.com";
 
-// Має збігатися з DeviceGuid, який ти створив/зберіг в SmartDevices:
+
 static const char* DEVICE_GUID = "DEV-001";
 
-// Має збігатися з IOT_DEVICE_KEY у Render Environment:
-static const char* DEVICE_KEY = "CHANGE_ME";
 
-// Куди слати телеметрію:
+static const char* DEVICE_KEY = "kmetyk-iot-2025-xyz";
+
 static const char* TELEMETRY_PATH = "/api/iot/telemetry";
 
 void connectWiFi() {
@@ -79,7 +71,7 @@ bool postTelemetry(float tempC, float motion, bool tempAlert, bool motionAlert) 
   if (WiFi.status() != WL_CONNECTED) return false;
 
   WiFiClientSecure client;
-  client.setInsecure(); // для демо/лаби (без перевірки сертифіката HTTPS)
+  client.setInsecure();
 
   HTTPClient http;
   String url = String(API_BASE) + TELEMETRY_PATH;
@@ -116,10 +108,9 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  // I2C
   Wire.begin(SDA_PIN, SCL_PIN);
 
-  // ===== OLED =====
+  
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println("❌ OLED not found");
     while (true) delay(100);
@@ -129,10 +120,10 @@ void setup() {
   display.setTextSize(1);
   display.setTextColor(WHITE);
 
-  // ===== DS18B20 =====
+
   ds18b20.begin();
 
-  // ===== MPU6050 =====
+
   if (!mpu.begin()) {
     Serial.println("❌ MPU6050 not found");
     while (true) delay(100);
@@ -144,24 +135,22 @@ void setup() {
 
   Serial.println("✅ ShelterMonitor SmartDevice started");
 
-  // ===== Wi-Fi =====
+
   connectWiFi();
 }
 
 void loop() {
-  // Автовідновлення Wi-Fi
+
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
   }
 
-  // ===== Температура =====
+ 
   ds18b20.requestTemperatures();
   float temperature = ds18b20.getTempCByIndex(0);
 
-  // DS18B20 може віддати -127, якщо датчик відвалився
   bool tempReadOk = (temperature > -100.0 && temperature < 125.0);
 
-  // ===== Рух =====
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
@@ -175,7 +164,6 @@ void loop() {
   bool tempAlert = (!tempReadOk) || (temperature < TEMP_MIN || temperature > TEMP_MAX);
   bool motionAlert = (motionLevel > MOTION_LIMIT);
 
-  // ===== Serial =====
   Serial.println("===== Shelter Telemetry =====");
 
   Serial.print("Temperature: ");
@@ -196,7 +184,6 @@ void loop() {
   Serial.println(motionAlert ? "ACTIVE" : "NORMAL");
   Serial.println();
 
-  // ===== OLED =====
   display.clearDisplay();
   display.setCursor(0, 0);
 
@@ -221,8 +208,7 @@ void loop() {
 
   display.display();
 
-  // ===== Відправка на бекенд =====
-  // Якщо температура не зчиталась — все одно шлемо, але з tempAlert=true
+
   float tempToSend = tempReadOk ? temperature : -127.0;
   postTelemetry(tempToSend, motionLevel, tempAlert, motionAlert);
 
