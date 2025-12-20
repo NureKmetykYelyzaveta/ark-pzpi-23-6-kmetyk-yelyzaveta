@@ -10,8 +10,33 @@ const updateActivity = require('./middleware/updateActivity')
 const { swaggerUi, swaggerSpec } = require('./swagger/swagger')
 
 const app = express()
+
+// ВАЖЛИВО для Render/HTTPS за проксі
+app.set('trust proxy', 1) // :contentReference[oaicite:2]{index=2}
+
 app.use(express.json())
 app.use(cors())
+
+// -------------------------------
+// SWAGGER (до auth, щоб не вимагав токен і не оновлював activity)
+// -------------------------------
+app.get('/swagger.json', (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}`
+  const specWithServer = {
+    ...swaggerSpec,
+    servers: [{ url: baseUrl }]
+  }
+  res.json(specWithServer)
+})
+
+// Swagger UI буде брати спеки звідси, і тоді "Try it out" піде на твій домен
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(null, {
+    swaggerOptions: { url: '/swagger.json' } // :contentReference[oaicite:3]{index=3}
+  })
+)
 
 // -------------------------------
 // PUBLIC ROUTES
@@ -19,7 +44,8 @@ app.use(cors())
 const publicPaths = new Set([
   '/api/users/login',
   '/api/users/register',
-  '/'
+  '/',
+  '/swagger.json'
 ])
 
 // -------------------------------
@@ -65,13 +91,11 @@ function auth(req, res, next) {
 
 app.use(auth)
 
-// UPDATE ACTIVITY — only for authenticated users
-app.use(updateActivity)
-
-// -------------------------------
-// SWAGGER
-// -------------------------------
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+// UPDATE ACTIVITY — реально тільки коли є req.user
+app.use((req, res, next) => {
+  if (!req.user) return next()
+  return updateActivity(req, res, next)
+})
 
 // -------------------------------
 // ROUTES
@@ -86,7 +110,6 @@ app.use('/api/logs', require('./routes/logs'))
 app.use('/api/smart-devices', require('./routes/smartDevices'))
 app.use('/api/admin', require('./routes/admin'))
 
-// Root message
 app.get('/', (req, res) => {
   res.send('Pet Shelter API is running')
 })
