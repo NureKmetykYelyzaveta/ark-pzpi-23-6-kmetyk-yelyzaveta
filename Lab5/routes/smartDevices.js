@@ -21,7 +21,25 @@ const db = require('../db/db')
  *       properties:
  *         deviceGuid:
  *           type: string
+ *           example: DEV-001
  *         dogId:
+ *           type: integer
+ *           example: 1
+ *
+ *     SmartDevice:
+ *       type: object
+ *       properties:
+ *         Id:
+ *           type: integer
+ *         DeviceGuid:
+ *           type: string
+ *         DogId:
+ *           type: integer
+ *         LastLatitude:
+ *           type: number
+ *         LastLongitude:
+ *           type: number
+ *         BatteryLevel:
  *           type: integer
  */
 
@@ -31,6 +49,28 @@ const db = require('../db/db')
  *   post:
  *     summary: Створення нового розумного пристрою
  *     tags: [SmartDevices]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/SmartDeviceCreate"
+ *     responses:
+ *       201:
+ *         description: Пристрій створено
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *       404:
+ *         description: Тварину не знайдено або вона не належить користувачу
+ *       409:
+ *         description: DeviceGuid вже існує
  */
 router.post('/', (req, res) => {
   const { deviceGuid, dogId } = req.body
@@ -69,6 +109,17 @@ router.post('/', (req, res) => {
  *   get:
  *     summary: Отримати список пристроїв користувача
  *     tags: [SmartDevices]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Список пристроїв
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: "#/components/schemas/SmartDevice"
  */
 router.get('/', (req, res) => {
   db.all(
@@ -90,6 +141,34 @@ router.get('/', (req, res) => {
  *   put:
  *     summary: Оновити дані пристрою
  *     tags: [SmartDevices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/SmartDeviceCreate"
+ *     responses:
+ *       200:
+ *         description: Пристрій оновлено
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 updated:
+ *                   type: integer
+ *       404:
+ *         description: Пристрій не знайдено або не належить користувачу
+ *       409:
+ *         description: DeviceGuid вже існує
  */
 router.put('/:id', (req, res) => {
   const { deviceGuid, dogId } = req.body
