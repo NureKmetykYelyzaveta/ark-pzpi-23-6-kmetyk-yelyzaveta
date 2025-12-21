@@ -40,7 +40,7 @@ static const char* WIFI_PASS = "";
 static const char* API_BASE = "https://ark-pzpi-23-6-kmetyk-yelyzaveta.onrender.com";
 
 
-static const char* DEVICE_GUID = "DEV-001";
+static const char* DEVICE_GUID = "DEV-002";
 
 
 static const char* DEVICE_KEY = "kmetyk-iot-2025-xyz";
