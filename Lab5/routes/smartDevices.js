@@ -5,12 +5,9 @@ const db = require('../db/db')
 /**
  * @swagger
  * tags:
- *   name: SmartDevices
- *   description: Розумні пристрої для відстеження тварин
- */
-
-/**
- * @swagger
+ *   - name: SmartDevices
+ *     description: Розумні пристрої для відстеження тварин
+ *
  * components:
  *   schemas:
  *     SmartDeviceCreate:
@@ -21,7 +18,7 @@ const db = require('../db/db')
  *       properties:
  *         deviceGuid:
  *           type: string
- *           example: DEV-001
+ *           example: "DEV-001"
  *         dogId:
  *           type: integer
  *           example: 1
@@ -31,20 +28,26 @@ const db = require('../db/db')
  *       properties:
  *         Id:
  *           type: integer
+ *           example: 1
  *         DeviceGuid:
  *           type: string
+ *           example: "DEV-001"
  *         DogId:
  *           type: integer
+ *           example: 1
  *         LastLatitude:
  *           type: number
+ *           nullable: true
+ *           example: 50.4501
  *         LastLongitude:
  *           type: number
+ *           nullable: true
+ *           example: 30.5234
  *         BatteryLevel:
  *           type: integer
- */
-
-/**
- * @swagger
+ *           nullable: true
+ *           example: 87
+ *
  * /api/smart-devices:
  *   post:
  *     summary: Створення нового розумного пристрою
@@ -67,11 +70,77 @@ const db = require('../db/db')
  *               properties:
  *                 id:
  *                   type: integer
+ *       400:
+ *         description: deviceGuid and dogId are required
+ *       401:
+ *         description: Немає токена або токен невалідний
  *       404:
  *         description: Тварину не знайдено або вона не належить користувачу
  *       409:
  *         description: DeviceGuid вже існує
+ *       500:
+ *         description: Помилка сервера/БД
+ *
+ *   get:
+ *     summary: Отримати список пристроїв користувача
+ *     tags: [SmartDevices]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Список пристроїв
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: "#/components/schemas/SmartDevice"
+ *       401:
+ *         description: Немає токена або токен невалідний
+ *       500:
+ *         description: Помилка сервера/БД
+ *
+ * /api/smart-devices/{id}:
+ *   put:
+ *     summary: Оновити дані пристрою
+ *     tags: [SmartDevices]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/SmartDeviceCreate"
+ *     responses:
+ *       200:
+ *         description: Пристрій оновлено
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 updated:
+ *                   type: integer
+ *                   example: 1
+ *       400:
+ *         description: deviceGuid and dogId are required
+ *       401:
+ *         description: Немає токена або токен невалідний
+ *       404:
+ *         description: Пристрій не знайдено або не належить користувачу
+ *       409:
+ *         description: DeviceGuid вже існує
+ *       500:
+ *         description: Помилка сервера/БД
  */
+
 router.post('/', (req, res) => {
   const { deviceGuid, dogId } = req.body
 
@@ -103,24 +172,6 @@ router.post('/', (req, res) => {
   )
 })
 
-/**
- * @swagger
- * /api/smart-devices:
- *   get:
- *     summary: Отримати список пристроїв користувача
- *     tags: [SmartDevices]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Список пристроїв
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: "#/components/schemas/SmartDevice"
- */
 router.get('/', (req, res) => {
   db.all(
     `SELECT sd.*
@@ -135,41 +186,6 @@ router.get('/', (req, res) => {
   )
 })
 
-/**
- * @swagger
- * /api/smart-devices/{id}:
- *   put:
- *     summary: Оновити дані пристрою
- *     tags: [SmartDevices]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/SmartDeviceCreate"
- *     responses:
- *       200:
- *         description: Пристрій оновлено
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 updated:
- *                   type: integer
- *       404:
- *         description: Пристрій не знайдено або не належить користувачу
- *       409:
- *         description: DeviceGuid вже існує
- */
 router.put('/:id', (req, res) => {
   const { deviceGuid, dogId } = req.body
 
