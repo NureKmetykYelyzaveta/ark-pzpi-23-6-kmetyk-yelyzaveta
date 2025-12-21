@@ -31,15 +31,6 @@ const db = require('../db/db')
  *   post:
  *     summary: Створення нового розумного пристрою
  *     tags: [SmartDevices]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: "#/components/schemas/SmartDeviceCreate"
- *     responses:
- *       201:
- *         description: Пристрій створено
  */
 router.post('/', (req, res) => {
   const { deviceGuid, dogId } = req.body
@@ -48,14 +39,26 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'deviceGuid and dogId are required' })
   }
 
-  db.run(
-    'INSERT INTO SmartDevices (DeviceGuid, DogId, UserId) VALUES (?, ?, ?)',
-    [deviceGuid, dogId, req.user.id],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message, code: err.code })
-      }
-      res.status(201).json({ id: this.lastID })
+  db.get(
+    'SELECT Id FROM Animals WHERE Id = ? AND UserId = ?',
+    [dogId, req.user.id],
+    (aErr, animal) => {
+      if (aErr) return res.status(500).json({ error: aErr.message, code: aErr.code })
+      if (!animal) return res.status(404).json({ error: 'Animal not found for this user' })
+
+      db.run(
+        'INSERT INTO SmartDevices (DeviceGuid, DogId) VALUES (?, ?)',
+        [deviceGuid, dogId],
+        function (insErr) {
+          if (insErr) {
+            if (insErr.code === 'SQLITE_CONSTRAINT') {
+              return res.status(409).json({ error: 'DeviceGuid already exists' })
+            }
+            return res.status(500).json({ error: insErr.message, code: insErr.code })
+          }
+          res.status(201).json({ id: this.lastID })
+        }
+      )
     }
   )
 })
@@ -69,13 +72,14 @@ router.post('/', (req, res) => {
  */
 router.get('/', (req, res) => {
   db.all(
-    'SELECT * FROM SmartDevices WHERE UserId = ?',
+    `SELECT sd.*
+     FROM SmartDevices sd
+     JOIN Animals a ON a.Id = sd.DogId
+     WHERE a.UserId = ?`,
     [req.user.id],
     (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: err.message, code: err.code })
-      }
-      res.json(rows)
+      if (err) return res.status(500).json({ error: err.message, code: err.code })
+      res.json(rows || [])
     }
   )
 })
@@ -94,19 +98,34 @@ router.put('/:id', (req, res) => {
     return res.status(400).json({ error: 'deviceGuid and dogId are required' })
   }
 
-  db.run(
-    'UPDATE SmartDevices SET DeviceGuid = ?, DogId = ? WHERE Id = ? AND UserId = ?',
-    [deviceGuid, dogId, req.params.id, req.user.id],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message, code: err.code })
-      }
+  db.get(
+    'SELECT Id FROM Animals WHERE Id = ? AND UserId = ?',
+    [dogId, req.user.id],
+    (aErr, animal) => {
+      if (aErr) return res.status(500).json({ error: aErr.message, code: aErr.code })
+      if (!animal) return res.status(404).json({ error: 'Animal not found for this user' })
 
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Device not found' })
-      }
+      db.run(
+        `UPDATE SmartDevices
+         SET DeviceGuid = ?, DogId = ?
+         WHERE Id = ?
+           AND DogId IN (SELECT Id FROM Animals WHERE UserId = ?)`,
+        [deviceGuid, dogId, req.params.id, req.user.id],
+        function (updErr) {
+          if (updErr) {
+            if (updErr.code === 'SQLITE_CONSTRAINT') {
+              return res.status(409).json({ error: 'DeviceGuid already exists' })
+            }
+            return res.status(500).json({ error: updErr.message, code: updErr.code })
+          }
 
-      res.json({ updated: this.changes })
+          if (this.changes === 0) {
+            return res.status(404).json({ error: 'Device not found for this user' })
+          }
+
+          res.json({ updated: this.changes })
+        }
+      )
     }
   )
 })
