@@ -1,36 +1,41 @@
-const swaggerJsdoc = require("swagger-jsdoc");
-const swaggerUi = require("swagger-ui-express");
+const swaggerJsdoc = require('swagger-jsdoc')
+const swaggerUi = require('swagger-ui-express')
 
 const options = {
   definition: {
-    openapi: "3.0.0",
+    openapi: '3.0.0',
     info: {
-      title: "Pet Shelter API",
-      version: "1.0.0",
-      description: "API документація для системи притулку тварин",
+      title: 'Pet Shelter API',
+      version: '1.0.0',
+      description: 'API документація для системи притулку тварин'
     },
 
-    // 🔥 Глобальні компоненти для всіх маршрутів
     components: {
       securitySchemes: {
         bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
         },
-      },
+
+        deviceKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-Device-Key'
+        }
+      }
     },
 
     security: [
       {
-        bearerAuth: [],
-      },
-    ],
+        bearerAuth: []
+      }
+    ]
   },
 
-  apis: ["./routes/*.js"],
-};
+  apis: ['./routes/*.js']
+}
 
-const swaggerSpec = swaggerJsdoc(options);
+const swaggerSpec = swaggerJsdoc(options)
 
-module.exports = { swaggerUi, swaggerSpec };
+module.exports = { swaggerUi, swaggerSpec }

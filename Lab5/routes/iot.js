@@ -4,8 +4,9 @@ const db = require('../db/db')
 const router = express.Router()
 
 function deviceAuth(req, res, next) {
-  const key = req.headers['x-device-key']
-  const expected = process.env.IOT_DEVICE_KEY || 'DEVKEY'
+  const key = String(req.headers['x-device-key'] || '').trim()
+  const expected = String(process.env.IOT_DEVICE_KEY || 'DEVKEY').trim()
+
   if (!key || key !== expected) {
     return res.status(401).json({ error: 'Invalid device key' })
   }
@@ -182,7 +183,6 @@ router.post('/telemetry', deviceAuth, (req, res) => {
         `INSERT INTO DeviceTelemetry
           (DeviceGuid, DogId, TempC, Motion, TempAlert, MotionAlert, CreatedAt)
          VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
-
         [
           deviceGuid,
           device.DogId || null,
