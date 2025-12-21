@@ -25,15 +25,142 @@ db.run(`
   )
 `)
 
+/**
+ * @swagger
+ * tags:
+ *   - name: IoT
+ *     description: Телеметрія з розумних пристроїв (IoT)
+ *
+ * components:
+ *   schemas:
+ *     TelemetryIn:
+ *       type: object
+ *       required:
+ *         - deviceGuid
+ *       properties:
+ *         deviceGuid:
+ *           type: string
+ *           example: "DEV-001"
+ *         tempC:
+ *           type: number
+ *           nullable: true
+ *           example: 23.5
+ *         motion:
+ *           type: number
+ *           nullable: true
+ *           example: 1.2
+ *         tempAlert:
+ *           type: boolean
+ *           example: false
+ *         motionAlert:
+ *           type: boolean
+ *           example: false
+ *         ts:
+ *           type: string
+ *           description: ISO timestamp (необов'язково). Якщо не передано, ставиться поточний час.
+ *           example: "2025-12-21T04:02:46Z"
+ *
+ *     TelemetryRow:
+ *       type: object
+ *       properties:
+ *         Id:
+ *           type: integer
+ *           example: 101
+ *         DeviceGuid:
+ *           type: string
+ *           example: "DEV-001"
+ *         DogId:
+ *           type: integer
+ *           nullable: true
+ *           example: 1
+ *         TempC:
+ *           type: number
+ *           nullable: true
+ *           example: 23.5
+ *         Motion:
+ *           type: number
+ *           nullable: true
+ *           example: 1.2
+ *         TempAlert:
+ *           type: integer
+ *           example: 0
+ *         MotionAlert:
+ *           type: integer
+ *           example: 0
+ *         CreatedAt:
+ *           type: string
+ *           example: "2025-12-21 04:02:46"
+ *
+ *     TelemetryOk:
+ *       type: object
+ *       properties:
+ *         ok:
+ *           type: boolean
+ *           example: true
+ *         telemetryId:
+ *           type: integer
+ *           example: 101
+ *         dogId:
+ *           type: integer
+ *           nullable: true
+ *           example: 1
+ *
+ *     ErrorResponse:
+ *       type: object
+ *       properties:
+ *         error:
+ *           type: string
+ *           example: "Invalid device key"
+ */
+
+/**
+ * @swagger
+ * /api/iot/telemetry:
+ *   post:
+ *     summary: Надіслати телеметрію з пристрою
+ *     tags: [IoT]
+ *     security:
+ *       - deviceKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: "#/components/schemas/TelemetryIn"
+ *     responses:
+ *       200:
+ *         description: Телеметрію збережено
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/TelemetryOk"
+ *       400:
+ *         description: Некоректний запит (наприклад, немає deviceGuid)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       401:
+ *         description: Невірний ключ пристрою (X-Device-Key)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       404:
+ *         description: Пристрій не зареєстровано (DeviceGuid відсутній у SmartDevices)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       500:
+ *         description: Помилка БД/вставки
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 router.post('/telemetry', deviceAuth, (req, res) => {
-  const {
-    deviceGuid,
-    tempC,
-    motion,
-    tempAlert,
-    motionAlert,
-    ts
-  } = req.body || {}
+  const { deviceGuid, tempC, motion, tempAlert, motionAlert, ts } = req.body || {}
 
   if (!deviceGuid) {
     return res.status(400).json({ error: 'deviceGuid is required' })
@@ -55,6 +182,7 @@ router.post('/telemetry', deviceAuth, (req, res) => {
         `INSERT INTO DeviceTelemetry
           (DeviceGuid, DogId, TempC, Motion, TempAlert, MotionAlert, CreatedAt)
          VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))`,
+
         [
           deviceGuid,
           device.DogId || null,
@@ -76,6 +204,49 @@ router.post('/telemetry', deviceAuth, (req, res) => {
   )
 })
 
+/**
+ * @swagger
+ * /api/iot/telemetry/latest:
+ *   get:
+ *     summary: Отримати останній запис телеметрії для пристрою
+ *     tags: [IoT]
+ *     security:
+ *       - deviceKeyAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: deviceGuid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "DEV-001"
+ *     responses:
+ *       200:
+ *         description: Останній запис або null
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - $ref: "#/components/schemas/TelemetryRow"
+ *                 - type: "null"
+ *       400:
+ *         description: Не передано deviceGuid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       401:
+ *         description: Невірний X-Device-Key
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       500:
+ *         description: Помилка БД
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 router.get('/telemetry/latest', deviceAuth, (req, res) => {
   const { deviceGuid } = req.query
   if (!deviceGuid) return res.status(400).json({ error: 'deviceGuid is required' })
@@ -93,6 +264,58 @@ router.get('/telemetry/latest', deviceAuth, (req, res) => {
   )
 })
 
+/**
+ * @swagger
+ * /api/iot/telemetry:
+ *   get:
+ *     summary: Отримати список телеметрії для пристрою
+ *     tags: [IoT]
+ *     security:
+ *       - deviceKeyAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: deviceGuid
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: "DEV-001"
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 200
+ *           default: 20
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: Масив записів (найновіші першими)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: "#/components/schemas/TelemetryRow"
+ *       400:
+ *         description: Не передано deviceGuid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       401:
+ *         description: Невірний X-Device-Key
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ *       500:
+ *         description: Помилка БД
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/ErrorResponse"
+ */
 router.get('/telemetry', deviceAuth, (req, res) => {
   const { deviceGuid, limit } = req.query
   if (!deviceGuid) return res.status(400).json({ error: 'deviceGuid is required' })
