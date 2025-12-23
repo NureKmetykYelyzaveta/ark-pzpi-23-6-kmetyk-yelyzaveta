@@ -1,3 +1,4 @@
+
 const swaggerJsdoc = require("swagger-jsdoc");
 const swaggerUi = require("swagger-ui-express");
 
@@ -7,28 +8,20 @@ const options = {
     info: {
       title: "Pet Shelter API",
       version: "1.0.0",
-      description: "API документація для системи притулку тварин",
+      description: "API документація для системи притулку тварин"
     },
-
-    // 🔥 Глобальні компоненти для всіх маршрутів
     components: {
       securitySchemes: {
         bearerAuth: {
           type: "http",
           scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
+          bearerFormat: "JWT"
+        }
+      }
     },
-
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
+    security: [{ bearerAuth: [] }]
   },
-
-  apis: ["./routes/*.js"],
+  apis: ["./routes/*.js"]
 };
 
 const swaggerSpec = swaggerJsdoc(options);

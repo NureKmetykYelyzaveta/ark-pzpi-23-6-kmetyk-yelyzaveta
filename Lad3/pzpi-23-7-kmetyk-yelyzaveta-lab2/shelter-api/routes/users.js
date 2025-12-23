@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const db = require("../db/db");
 
-const JWT_SECRET = process.env.JWT_SECRET || "DEFAULT_SECRET";
+const JWT_SECRET = process.env.JWT_SECRET || "SECRET123";
 
 /**
  * @swagger
