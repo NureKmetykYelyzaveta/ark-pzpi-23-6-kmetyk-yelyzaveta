@@ -13,7 +13,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/animals", require("./routes/animals"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/roles", require("./routes/roles"));
-app.use("/api/medical-records", require("./routes/medicalRecords"));
+app.use("/api/medical", require("./routes/medicalRecords"));
 app.use("/api/state-records", require("./routes/stateRecords"));
 app.use("/api/treatments", require("./routes/treatments"));
 app.use("/api/logs", require("./routes/logs"));
