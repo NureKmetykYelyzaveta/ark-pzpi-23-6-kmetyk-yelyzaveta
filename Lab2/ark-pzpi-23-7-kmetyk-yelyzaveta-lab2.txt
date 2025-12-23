@@ -495,5 +495,6 @@ CREATE TABLE Logs (
 
 
 ДОДАТОК Б
-Посилання на код
+Посилання на код:
 https://github.com/NureKmetykYelyzaveta/ark-pzpi-23-6-kmetyk-yelyzaveta
+Посилання на відео: https://youtu.be/mv-uCrBDOjo
