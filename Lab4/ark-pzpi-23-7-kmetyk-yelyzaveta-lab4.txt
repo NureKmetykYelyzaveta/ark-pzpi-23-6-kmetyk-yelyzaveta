@@ -220,3 +220,6 @@ diagram.json:
   "dependencies": {}
 }
 
+
+Додаток Б
+Посилання на відео: https://youtu.be/iIDENy3SYWs
